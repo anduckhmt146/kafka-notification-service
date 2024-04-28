@@ -1,0 +1,23 @@
+setting:
+  service_name: kakfa-consumer
+  version: 0.0.1
+
+service:
+  name: kakfa-consumer
+  http_port: ':8080'
+  grpc_port: ':9090'
+
+mysql:
+  db_host: localhost
+  db_port: 3306
+  db_name: users
+  db_user: root
+  db_password: ''
+  db_driver: mysql
+
+kafka:
+  host: localhost
+  port: 9092
+  group_id: kakfa-consumer
+  topic: kafka
+  version: 1.0.0
