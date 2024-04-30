@@ -9,7 +9,8 @@ import (
 
 func autoMigrateSchema(db *gorm.DB) error {
 	models := []interface{}{
-		&models.KafkaMessage{},
+		&models.User{},
+		&models.Notification{},
 	}
 	for _, model := range models {
 		if err := db.AutoMigrate(model); err != nil {

@@ -1,16 +1,15 @@
 setting:
-  service_name: kakfa-consumer
+  service_name: notification
   version: 0.0.1
 
 service:
-  name: kakfa-consumer
+  name: notification
   http_port: ':8080'
-  grpc_port: ':9090'
 
 mysql:
   db_host: localhost
   db_port: 3306
-  db_name: kafka-consumer
+  db_name: notification
   db_user: root
   db_password: ''
   db_driver: mysql
@@ -18,6 +17,6 @@ mysql:
 kafka:
   host: localhost
   port: 9092
-  group_id: kakfa-consumer
-  topic: kafka
+  group_id: kafka-notification-v1
+  topic: notification
   version: 1.0.0

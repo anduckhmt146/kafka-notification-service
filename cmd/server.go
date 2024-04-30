@@ -4,28 +4,22 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/anduckhmt146/kakfa-consumer/internal/db"
+	router "github.com/anduckhmt146/kakfa-consumer/internal/routers"
 	"github.com/anduckhmt146/kakfa-consumer/internal/services"
-	"github.com/gin-gonic/gin"
-	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/spf13/viper"
 
-	"google.golang.org/grpc"
-	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"gorm.io/gorm"
 )
 
 type Server struct {
 	DB         *gorm.DB
 	httpServer *http.Server
-	grpcServer *grpc.Server
 }
 
 func NewServer() *Server {
@@ -39,26 +33,13 @@ func NewServer() *Server {
 	}
 }
 
-func (s *Server) SetupRouter() *gin.Engine {
-	gin.SetMode(gin.ReleaseMode)
-	router := gin.New()
-
-	router.Use(gin.Logger(), gin.Recovery())
-
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "OK"})
-	})
-
-	return router
-}
-
 func (s *Server) SetupHTTPServer() {
 	httpPort := viper.GetString("service.http_port")
-	router := s.SetupRouter()
+	ginRouter := router.SetupRouter(s.DB)
 
 	s.httpServer = &http.Server{
 		Addr:    httpPort,
-		Handler: router,
+		Handler: ginRouter,
 	}
 
 	go func() {
@@ -69,35 +50,7 @@ func (s *Server) SetupHTTPServer() {
 	}()
 }
 
-func (s *Server) SetupGRPCServer() {
-	grpcPort := viper.GetString("service.grpc_port")
-	grpcListener, err := net.Listen("tcp", grpcPort)
-	if err != nil {
-		log.Fatalf("Failed to listen: %v", err)
-	}
-
-	s.grpcServer = grpc.NewServer(
-		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer()),
-		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer()),
-	)
-
-	healthService := &HealthService{}
-	healthpb.RegisterHealthServer(s.grpcServer, healthService)
-	grpc_prometheus.Register(s.grpcServer)
-	grpc_prometheus.EnableHandlingTimeHistogram()
-
-	go func() {
-		log.Println("gRPC server listening on", grpcPort)
-		if err := s.grpcServer.Serve(grpcListener); err != nil {
-			log.Fatalf("Failed to serve gRPC server: %v", err)
-		}
-	}()
-}
-
 func (s *Server) Shutdown() {
-	// Graceful shutdown for gRPC server
-	s.grpcServer.GracefulStop()
-
 	// Close database connection
 	if sqlDB, err := s.DB.DB(); err != nil {
 		log.Printf("Error on closing db connection: %v", err)
@@ -145,9 +98,6 @@ func (s *Server) Start() {
 	// Start Kafka
 	go s.StartKafka()
 
-	// Start gRPC Server
-	s.SetupGRPCServer()
-
 	// Handle graceful shutdown
 	stopChan := make(chan os.Signal, 1)
 	signal.Notify(stopChan, os.Interrupt, syscall.SIGTERM)
@@ -155,16 +105,4 @@ func (s *Server) Start() {
 
 	log.Println("Shutting down server...")
 	s.Shutdown()
-}
-
-type HealthService struct{}
-
-func (s *HealthService) Check(ctx context.Context, req *healthpb.HealthCheckRequest) (*healthpb.HealthCheckResponse, error) {
-	return &healthpb.HealthCheckResponse{
-		Status: healthpb.HealthCheckResponse_SERVING,
-	}, nil
-}
-
-func (s *HealthService) Watch(req *healthpb.HealthCheckRequest, server healthpb.Health_WatchServer) error {
-	return nil
 }

@@ -1,7 +1,12 @@
 package models
 
-type KafkaMessage struct {
-	ID      uint   `gorm:"primaryKey;column:id" json:"id"`
-	Email   string `gorm:"primaryKey;column:email" json:"email"`
-	Message string `gorm:"primaryKey;column:message" json:"message"`
+type User struct {
+	ID   int    `column:"id" json:"id"`
+	Name string `column:"name" json:"name"`
+}
+
+type Notification struct {
+	FromID  int    `column:"from_id" json:"fromID"`
+	ToID    int    `column:"to_id" json:"toID"`
+	Message string `column:"message" json:"message"`
 }
