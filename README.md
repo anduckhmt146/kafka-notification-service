@@ -6,7 +6,7 @@ P/s: Self-learning project for Kafka.
 
 # Run Local
 
-1. Run Kakfa with Docker
+1. Run Kafka with Docker
 
 ```bash
     make docker-compose-up
